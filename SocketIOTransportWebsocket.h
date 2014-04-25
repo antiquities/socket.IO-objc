@@ -28,6 +28,10 @@
     SRWebSocket *_webSocket;
 }
 
+#if 0
 @property (nonatomic, weak) id <SocketIOTransportDelegate> delegate;
+#else
+@property (nonatomic, assign) id <SocketIOTransportDelegate> delegate;
+#endif
 
 @end

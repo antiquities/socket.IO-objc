@@ -49,13 +49,20 @@ static NSString* kSecureSocketPortURL = @"wss://%@:%d/socket.io/1/websocket/%@";
 
 - (BOOL) isReady
 {
-    return _webSocket.readyState == SR_OPEN;
+    if (_webSocket != nil) {
+        return _webSocket.readyState == SR_OPEN;
+    }
+    return NO;
 }
 
 - (void) open
 {
-    NSString *urlStr;
-    NSString *format;
+    if (delegate == nil) {
+        return;
+    }
+    
+    NSString *urlStr = nil;
+    NSString *format = nil;
     if (delegate.port) {
         format = delegate.useSecure ? kSecureSocketPortURL : kInsecureSocketPortURL;
         urlStr = [NSString stringWithFormat:format, delegate.host, delegate.port, delegate.sid];
@@ -66,6 +73,9 @@ static NSString* kSecureSocketPortURL = @"wss://%@:%d/socket.io/1/websocket/%@";
     }
     NSURL *url = [NSURL URLWithString:urlStr];
     
+#if !__has_feature(objc_arc)
+    [_webSocket release];
+#endif
     _webSocket = nil;
     
     _webSocket = [[SRWebSocket alloc] initWithURL:url];
@@ -77,6 +87,10 @@ static NSString* kSecureSocketPortURL = @"wss://%@:%d/socket.io/1/websocket/%@";
 - (void) dealloc
 {
     [_webSocket setDelegate:nil];
+#if !__has_feature(objc_arc)
+    [_webSocket release];
+    [super dealloc];
+#endif
 }
 
 - (void) close

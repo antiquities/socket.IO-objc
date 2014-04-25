@@ -125,6 +125,10 @@ NSString* const SocketIOException = @"SocketIOException";
         _port = port;
         _params = params;
         _endpoint = [endpoint copy];
+#if !__has_feature(objc_arc)
+        [_host retain];
+        [_params retain];
+#endif
         
         // create a query parameters string
         NSMutableString *query = [[NSMutableString alloc] initWithString:@""];
@@ -139,6 +143,9 @@ NSString* const SocketIOException = @"SocketIOException";
         NSString *handshakeUrl = [NSString stringWithFormat:kHandshakeURL, protocol, _host, port, kResourceName, time, query];
         
         DEBUGLOG(@"Connecting to socket with URL: %@", handshakeUrl);
+#if !__has_feature(objc_arc)
+        [query release];
+#endif
         query = nil;
         
         // make a request
@@ -160,6 +167,9 @@ NSString* const SocketIOException = @"SocketIOException";
         
         if (_handshake) {
             _httpRequestData = [NSMutableData data];
+#if !__has_feature(objc_arc)
+            [_httpRequestData retain];
+#endif
         }
         else {
             // connection failed
@@ -211,6 +221,9 @@ NSString* const SocketIOException = @"SocketIOException";
     packet.data = data;
     packet.pId = [self addAcknowledge:function];
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) sendJSON:(NSDictionary *)data
@@ -224,6 +237,9 @@ NSString* const SocketIOException = @"SocketIOException";
     packet.data = [SocketIOJSONSerialization JSONStringFromObject:data error:nil];
     packet.pId = [self addAcknowledge:function];
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) sendEvent:(NSString *)eventName withData:(id)data
@@ -247,6 +263,9 @@ NSString* const SocketIOException = @"SocketIOException";
         packet.ack = @"data";
     }
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) sendAcknowledgement:(NSString *)pId withArgs:(NSArray *)data 
@@ -257,6 +276,9 @@ NSString* const SocketIOException = @"SocketIOException";
     packet.ack = @"data";
 
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) setResourceName:(NSString *)name
@@ -272,18 +294,27 @@ NSString* const SocketIOException = @"SocketIOException";
     SocketIOPacket *packet = [[SocketIOPacket alloc] initWithType:@"disconnect"];
     [self send:packet];
     [self onDisconnect:nil];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) sendConnect
 {
     SocketIOPacket *packet = [[SocketIOPacket alloc] initWithType:@"connect"];
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) sendHeartbeat
 {
     SocketIOPacket *packet = [[SocketIOPacket alloc] initWithType:@"heartbeat"];
     [self send:packet];
+#if !__has_feature(objc_arc)
+    [packet release];
+#endif
 }
 
 - (void) send:(SocketIOPacket *)packet
@@ -388,7 +419,11 @@ NSString* const SocketIOException = @"SocketIOException";
     if (function) {
         ++_ackCount;
         NSString *ac = [NSString stringWithFormat:@"%ld", (long)_ackCount];
+#if !__has_feature(objc_arc)
+        [_acks setObject:[[function copy] autorelease] forKey:ac];
+#else
         [_acks setObject:[function copy] forKey:ac];
+#endif
         return ac;
     }
     return nil;
@@ -406,6 +441,9 @@ NSString* const SocketIOException = @"SocketIOException";
 {
     if (_timeout) {
         dispatch_source_cancel(_timeout);
+#if OS_OBJECT_USE_OBJC_RETAIN_RELEASE == 0
+        dispatch_release(_timeout);
+#endif
         _timeout = NULL;
     }
     
@@ -420,6 +458,9 @@ NSString* const SocketIOException = @"SocketIOException";
     DEBUGLOG(@"start/reset timeout");
     if (_timeout) {
         dispatch_source_cancel(_timeout);
+#if OS_OBJECT_USE_OBJC_RETAIN_RELEASE == 0
+        dispatch_release(_timeout);
+#endif
         _timeout = NULL;
     }
     
@@ -433,7 +474,11 @@ NSString* const SocketIOException = @"SocketIOException";
                               0,
                               0);
     
+#if !__has_feature(objc_arc)
+    __block __weak typeof(self) weakSelf = self;
+#else
     __weak SocketIO *weakSelf = self;
+#endif
     
     dispatch_source_set_event_handler(_timeout, ^{
         [weakSelf onTimeout];
@@ -599,6 +644,9 @@ NSString* const SocketIOException = @"SocketIOException";
             }
         }
         
+#if !__has_feature(objc_arc)
+        [packet release];
+#endif
         packet = nil;
     }
     else {
@@ -621,6 +669,9 @@ NSString* const SocketIOException = @"SocketIOException";
     // Kill the heartbeat timer
     if (_timeout) {
         dispatch_source_cancel(_timeout);
+#if OS_OBJECT_USE_OBJC_RETAIN_RELEASE == 0
+        dispatch_release(_timeout);
+#endif
         _timeout = NULL;
     }
     
@@ -629,6 +680,10 @@ NSString* const SocketIOException = @"SocketIOException";
         // clear websocket's delegate - otherwise crashes
         _transport.delegate = nil;
         [_transport close];
+#if !__has_feature(objc_arc)
+        [_transport release];
+#endif
+        _transport = nil;
     }
     
     if ((wasConnected || wasConnecting)) {
@@ -693,6 +748,9 @@ NSString* const SocketIOException = @"SocketIOException";
         NSError *err = [NSError errorWithDomain:SocketIOError
                                            code:errorCode
                                        userInfo:errorInfo];
+#if !__has_feature(objc_arc)
+        [errorInfo release];
+#endif
         
         [_delegate socketIO:self onError:err];
     }
@@ -705,10 +763,15 @@ NSString* const SocketIOException = @"SocketIOException";
     DEBUGLOG(@"connectionDidFinishLoading() %@", responseString);
     NSArray *data = [responseString componentsSeparatedByString:@":"];
     // should be SID : heartbeat timeout : connection timeout : supported transports
+
+#if !__has_feature(objc_arc)
+    [responseString release];
+    responseString = nil;
+#endif
     
     // check each returned value (thanks for the input https://github.com/taiyangc)
     BOOL connectionFailed = false;
-    NSError* error;
+    NSError* error = nil;
     
     _sid = [data objectAtIndex:0];
     if ([_sid length] < 1 || [data count] < 4) {
@@ -756,10 +819,22 @@ NSString* const SocketIOException = @"SocketIOException";
         
         if (webSocketTransportClass != nil && [transports indexOfObject:@"websocket"] != NSNotFound) {
             DEBUGLOG(@"websocket supported -> using it now");
+#if !__has_feature(objc_arc)
+            if (_transport != nil) {
+                _transport.delegate = nil;
+                [_transport release];
+            }
+#endif
             _transport = [[webSocketTransportClass alloc] initWithDelegate:self];
         }
         else if (xhrTransportClass != nil && [transports indexOfObject:@"xhr-polling"] != NSNotFound) {
             DEBUGLOG(@"xhr polling supported -> using it now");
+#if !__has_feature(objc_arc)
+            if (_transport != nil) {
+                _transport.delegate = nil;
+                [_transport release];
+            }
+#endif
             _transport = [[xhrTransportClass alloc] initWithDelegate:self];
         }
         else {
@@ -824,23 +899,47 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 
 - (void) dealloc
 {
+    if (_timeout) {
+        dispatch_source_cancel(_timeout);
+#if OS_OBJECT_USE_OBJC_RETAIN_RELEASE == 0
+        dispatch_release(_timeout);
+#endif
+        _timeout = NULL;
+    }
+    
+#if !__has_feature(objc_arc)
+    [_httpRequestData release];
+#endif
+    _httpRequestData = nil;
+    
     [_handshake cancel];
+#if !__has_feature(objc_arc)
+    [_handshake release];
+#endif
     _handshake = nil;
 
+#if !__has_feature(objc_arc)
+    [_host release];
+    [_sid release];
+    [_endpoint release];
+#endif
     _host = nil;
     _sid = nil;
     _endpoint = nil;
     
-    _transport.delegate = nil;
-    _transport = nil;
-    
-    if (_timeout) {
-        dispatch_source_cancel(_timeout);
-        _timeout = NULL;
+    if (_transport != nil) {
+        _transport.delegate = nil;
+#if !__has_feature(objc_arc)
+        [_transport release];
+#endif
+        _transport = nil;
     }
     
     _queue = nil;
     _acks = nil;
+#if !__has_feature(objc_arc)
+    [super dealloc];
+#endif
 }
 
 

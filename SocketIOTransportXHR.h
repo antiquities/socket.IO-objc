@@ -30,7 +30,11 @@
     BOOL _isClosed;
 }
 
+#if 0
 @property (nonatomic, weak) id <SocketIOTransportDelegate> delegate;
+#else
+@property (nonatomic, assign) id <SocketIOTransportDelegate> delegate;
+#endif
 @property (nonatomic) BOOL isClosed;
 
 @end

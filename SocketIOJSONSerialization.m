@@ -28,7 +28,11 @@
 
 + (NSString *) JSONStringFromObject:(id)object error:(NSError **)error {
     NSData *data = [NSJSONSerialization dataWithJSONObject:object options:0 error:error];
-    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];    
+#if !__has_feature(objc_arc)
+    return [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
+#else
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+#endif
 }
 
 @end

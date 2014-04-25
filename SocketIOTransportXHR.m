@@ -56,9 +56,27 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
     return self;
 }
 
+#if !__has_feature(objc_arc)
+- (void) dealloc
+{
+    [_polls release];
+    _polls = nil;
+    [_data release];
+    _data = nil;
+    [super dealloc];
+}
+#endif
+
 - (void) open
 {
-    NSString *format;
+    if (delegate == nil) {
+        return;
+    }
+#if !__has_feature(objc_arc)
+    [_url release];
+    _url = nil;
+#endif
+    NSString *format = nil;
     if (delegate.port) {
         format = delegate.useSecure ? kSecureXHRPortURL : kInsecureXHRPortURL;
         _url = [NSString stringWithFormat:format, delegate.host, delegate.port, delegate.sid];
@@ -67,14 +85,17 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
         format = delegate.useSecure ? kSecureXHRURL : kInsecureXHRURL;
         _url = [NSString stringWithFormat:format, delegate.host, delegate.sid];
     }
+#if !__has_feature(objc_arc)
+    [_url retain];
+#endif
     DEBUGLOG(@"Opening XHR @ %@", _url);
     [self poll:nil];
 }
 
 - (void) close
 {
-    NSMutableDictionary *pollData;
-    NSURLConnection *conn;
+    NSMutableDictionary *pollData = nil;
+    NSURLConnection *conn = nil;
     for (NSString *key in _polls) {
         pollData = [_polls objectForKey:key];
         conn = [pollData objectForKey:@"connection"];
@@ -160,6 +181,10 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
     [pollData setObject:conn forKey:@"connection"];
     [pollData setValue:data forKey:@"data"];
     [_polls setObject:pollData forKey:conn.description];
+#if !__has_feature(objc_arc)
+    [pollData release];
+    pollData = nil;
+#endif
     
     [conn start];
 }
@@ -224,6 +249,10 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
                                                   code:SocketIODataCouldNotBeSend
                                               userInfo:errorInfo]];
         }
+#if !__has_feature(objc_arc)
+        [errorInfo release];
+        errorInfo = nil;
+#endif
     }
 }
 
@@ -270,6 +299,11 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
             }];
         }
     }
+
+#if !__has_feature(objc_arc)
+    [message release];
+    message = nil;
+#endif
     
     // remove current connection from pool
     [_polls removeObjectForKey:connection.description];

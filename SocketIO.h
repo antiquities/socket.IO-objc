@@ -95,7 +95,11 @@ typedef enum {
 @property (nonatomic, readonly) NSString *sid;
 @property (nonatomic, readonly) NSTimeInterval heartbeatTimeout;
 @property (nonatomic) BOOL useSecure;
+#if 0
 @property (nonatomic) NSArray *cookies;
+#else
+@property (nonatomic, retain) NSArray *cookies;
+#endif
 @property (nonatomic, readonly) BOOL isConnected, isConnecting;
 @property (nonatomic, weak) id<SocketIODelegate> delegate;
 @property (nonatomic) BOOL returnAllDataFromAck;

@@ -39,6 +39,9 @@
                   @"error",
                   @"noop",
                   nil];
+#if !__has_feature(objc_arc)
+        [_types retain];
+#endif
     }
     return self;
 }
@@ -86,8 +89,20 @@
 
 - (void) dealloc
 {
+#if !__has_feature(objc_arc)
+    [_types release];
+#endif
     _types = nil;
     
+#if !__has_feature(objc_arc)
+    self.type = nil;
+    self.pId = nil;
+    self.name = nil;
+    self.ack = nil;
+    self.data = nil;
+    self.args = nil;
+    self.endpoint = nil;
+#else
     type = nil;
     pId = nil;
     name = nil;
@@ -95,6 +110,10 @@
     data = nil;
     args = nil;
     endpoint = nil;
+#endif
+#if !__has_feature(objc_arc)
+    [super dealloc];
+#endif
 }
 
 @end
